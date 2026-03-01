@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "license": "BSD-3-Clause",
   "type": "module",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "deploy": "devvit upload",
     "dev": "dotenv -e .env -- devvit playtest",
@@ -17,6 +20,7 @@
   "devDependencies": {
     "devvit": "0.12.13",
     "dotenv-cli": "8.0.0",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "vitest": "^4.0.18"
   }
 }

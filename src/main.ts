@@ -1,129 +1,55 @@
-import { Devvit, type FormField } from "@devvit/public-api";
-
-import { handleNuke, handleNukePost } from "./nuke.js";
+import { Devvit } from "@devvit/public-api";
+import { handleCommentCreate, handlePostCreate } from "./enforcement.js";
+import { modConfigForm } from "./modSettings.js";
+import { flairWizardForm } from "./wizard.js";
+import { showDashboard } from "./dashboard.js";
 
 Devvit.configure({
   redditAPI: true,
+  kvStore: true,
 });
 
-const nukeFields: FormField[] = [
-  {
-    name: "remove",
-    label: "Remove comments",
-    type: "boolean",
-    defaultValue: true,
-  },
-  {
-    name: "lock",
-    label: "Lock comments",
-    type: "boolean",
-    defaultValue: false,
-  },
-  {
-    name: "skipDistinguished",
-    label: "Skip distinguished comments",
-    type: "boolean",
-    defaultValue: false,
-  },
-] as const;
-
-const nukeForm = Devvit.createForm(
-  () => {
-    return {
-      fields: nukeFields,
-      title: "Mop Comments",
-      acceptLabel: "Mop",
-      cancelLabel: "Cancel",
-    };
-  },
-  async ({ values }, context) => {
-    if (!values.lock && !values.remove) {
-      context.ui.showToast("You must select either lock or remove.");
-      return;
-    }
-
-    if (context.commentId) {
-      const result = await handleNuke(
-        {
-          remove: values.remove,
-          lock: values.lock,
-          skipDistinguished: values.skipDistinguished,
-          commentId: context.commentId,
-          subredditId: context.subredditId,
-        },
-        context
-      );
-      console.log(
-        `Mop result - ${result.success ? "success" : "fail"} - ${
-          result.message
-        }`
-      );
-      context.ui.showToast(
-        `${result.success ? "Success" : "Failed"} : ${result.message}`
-      );
-    } else {
-      context.ui.showToast(`Mop failed! Please try again later.`);
-    }
-  }
-);
-
 Devvit.addMenuItem({
-  label: "Mop comments",
-  description:
-    "Remove this comment and all child comments. This might take a few seconds to run.",
-  location: "comment",
-  forUserType: "moderator",
+  label: "Set identity flair",
+  description: "Open the flair wizard",
+  location: "subreddit",
+  forUserType: "loggedOut",
   onPress: (_, context) => {
-    context.ui.showForm(nukeForm);
+    context.ui.showForm(flairWizardForm);
   },
 });
 
-const nukePostForm = Devvit.createForm(
-  () => {
-    return {
-      fields: nukeFields,
-      title: "Mop Post Comments",
-      acceptLabel: "Mop",
-      cancelLabel: "Cancel",
-    };
-  },
-  async ({ values }, context) => {
-    if (!values.lock && !values.remove) {
-      context.ui.showToast("You must select either lock or remove.");
-      return;
-    }
-
-    if (!context.postId) {
-      throw new Error("No post ID");
-    }
-
-    const result = await handleNukePost(
-      {
-        remove: values.remove,
-        lock: values.lock,
-        skipDistinguished: values.skipDistinguished,
-        postId: context.postId,
-        subredditId: context.subredditId,
-      },
-      context
-    );
-    console.log(
-      `Mop result - ${result.success ? "success" : "fail"} - ${result.message}`
-    );
-    context.ui.showToast(
-      `${result.success ? "Success" : "Failed"} : ${result.message}`
-    );
-  }
-);
-
 Devvit.addMenuItem({
-  label: "Mop post comments",
-  description:
-    "Remove all comments of this post. This might take a few seconds to run.",
-  location: "post",
+  label: "Configure flair-tier policy",
+  description: "Moderator settings for tier enforcement",
+  location: "subreddit",
   forUserType: "moderator",
   onPress: (_, context) => {
-    context.ui.showForm(nukePostForm);
+    context.ui.showForm(modConfigForm);
+  },
+});
+
+Devvit.addMenuItem({
+  label: "Flair enforcement dashboard",
+  description: "View latest policy enforcement log summary",
+  location: "subreddit",
+  forUserType: "moderator",
+  onPress: async (_, context) => {
+    await showDashboard(context);
+  },
+});
+
+Devvit.addTrigger({
+  event: "PostCreate",
+  onEvent: async (event, context) => {
+    await handlePostCreate(event, context);
+  },
+});
+
+Devvit.addTrigger({
+  event: "CommentCreate",
+  onEvent: async (event, context) => {
+    await handleCommentCreate(event, context);
   },
 });
 
